@@ -1,12 +1,12 @@
 # Use golang:latest as the build image
-FROM golang:latest AS builder
+FROM golang:1.24 AS builder
 
 # Set the working directory to /app
 WORKDIR /app
 
 # Copy the Go module files and download dependencies
-COPY go.mod go.sum ./
-RUN go mod download
+# COPY go.mod go.sum ./
+# RUN go mod download
 
 # Copy the rest of the application code
 COPY . .
