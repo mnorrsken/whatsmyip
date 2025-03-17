@@ -8,8 +8,9 @@ spec:
   selector:
     app: whatsmyip
   ports:
-  - port: 80
+  - port: 8080
     targetPort: 8080
     protocol: TCP
     name: http
   type: ClusterIP
+  
