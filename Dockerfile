@@ -16,14 +16,14 @@ WORKDIR /app
 COPY . .
 
 # Build the Go application with multi-arch support
-RUN GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o /whatsmyip
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} go build -o whatsmyip
 
 # Use scratch as the parent image
 FROM scratch
 
 # Copy the built application from the build image to the parent image
-COPY --from=builder /whatsmyip /whatsmyip
-COPY --from=builder /templates /templates
+COPY --from=builder /app/whatsmyip /whatsmyip
+COPY templates /templates
 
-# Set the command to run the application (changed from ENTRYPOINT)
+# Set the command to run the application
 CMD ["/whatsmyip"]
