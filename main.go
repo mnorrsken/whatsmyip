@@ -1,10 +1,8 @@
 package main
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 )
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
