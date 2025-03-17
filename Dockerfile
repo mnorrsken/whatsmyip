@@ -23,6 +23,7 @@ FROM scratch
 
 # Copy the built application from the build image to the parent image
 COPY --from=builder /whatsmyip /whatsmyip
+COPY --from=builder /templates /templates
 
 # Set the command to run the application (changed from ENTRYPOINT)
 CMD ["/whatsmyip"]
