@@ -23,19 +23,14 @@ jobs:
 
       - name: Run Go tests
         run: |
-          go test -v ./... -coverprofile=coverage.out
-          go tool cover -html=coverage.out -o coverage.html
-          go get -u github.com/jstemmer/go-junit-report
-          go test -v ./... 2>&1 | go-junit-report > test-report.xml
+          go test -json -v ./... > test-report.json
 
       - name: Upload test reports
         uses: actions/upload-artifact@v4
         with:
           name: test-reports
           path: |
-            coverage.html
-            test-report.xml
-            coverage.out
+            test-report.json
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
