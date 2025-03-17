@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: whatsmyip
+  labels:
+    app: whatsmyip
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: whatsmyip
+  template:
+    metadata:
+      labels:
+        app: whatsmyip
+    spec:
+      containers:
+      - name: whatsmyip
+        image: ghcr.io/mnorrsken/whatsmyip:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 8080
+          name: http
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 15
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 10
