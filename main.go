@@ -21,7 +21,14 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request method: %s, URL path: %s", r.Method, r.URL.Path)
 	log.Printf("User agent: %s", r.UserAgent())
 
+	// Get client IP from X-Forwarded-For header or fall back to RemoteAddr
 	clientIP := r.RemoteAddr
+	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
+		clientIP = forwardedFor
+	}
+
+	// Get current server from X-Forwarded-Host header
+	currentServer := r.Header.Get("X-Forwarded-Host")
 
 	// Collect all headers
 	var headers []struct {
@@ -47,14 +54,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	data := struct {
-		ClientIP string
-		Headers  []struct {
+		ClientIP      string
+		CurrentServer string
+		Headers       []struct {
 			Name  string
 			Value string
 		}
 	}{
-		ClientIP: clientIP,
-		Headers:  headers,
+		ClientIP:      clientIP,
+		CurrentServer: currentServer,
+		Headers:       headers,
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {

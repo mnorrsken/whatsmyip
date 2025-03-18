@@ -21,6 +21,11 @@
         h1 {
             text-align: center;
             color: #333;
+            font-size: 2.5em;
+            margin: 20px 0;
+        }
+        .server-info {
+            margin-bottom: 10px;
         }
         .header {
             margin-bottom: 20px;
@@ -35,9 +40,9 @@
 </head>
 <body>
     <div class="container">
-        <h1>Client IP and Headers</h1>
+        <div class="server-info">Current Server: {{.CurrentServer}}</div>
+        <h1>{{.ClientIP}}</h1>
         <div class="header">
-            <div><span>Client IP:</span> {{.ClientIP}}</div>
             <h2>All Headers</h2>
             {{range .Headers}}
             <div><span>{{.Name}}:</span> {{.Value}}</div>
