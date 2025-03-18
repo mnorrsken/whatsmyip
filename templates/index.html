@@ -38,10 +38,10 @@
         <h1>Client IP and Headers</h1>
         <div class="header">
             <div><span>Client IP:</span> {{.ClientIP}}</div>
-            <div><span>X-Forwarded-For:</span> {{.XForwardedFor}}</div>
-            <div><span>X-Forwarded-Host:</span> {{.XForwardedHost}}</div>
-            <div><span>X-Forwarded-Proto:</span> {{.XForwardedProto}}</div>
-            <div><span>Host:</span> {{.Host}}</div>
+            <h2>All Headers</h2>
+            {{range .Headers}}
+            <div><span>{{.Name}}:</span> {{.Value}}</div>
+            {{end}}
         </div>
     </div>
 </body>

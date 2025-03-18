@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"sort"
 )
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
@@ -21,29 +22,39 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	log.Printf("User agent: %s", r.UserAgent())
 
 	clientIP := r.RemoteAddr
-	xForwardedFor := r.Header.Get("X-Forwarded-For")
-	xForwardedHost := r.Header.Get("X-Forwarded-Host")
-	xForwardedProto := r.Header.Get("X-Forwarded-Proto")
-	host := r.Host
 
-	log.Printf("Client IP: %s", clientIP)
-	log.Printf("X-Forwarded-For: %s", xForwardedFor)
-	log.Printf("X-Forwarded-Host: %s", xForwardedHost)
-	log.Printf("X-Forwarded-Proto: %s", xForwardedProto)
-	log.Printf("Host: %s", host)
+	// Collect all headers
+	var headers []struct {
+		Name  string
+		Value string
+	}
+
+	for name, values := range r.Header {
+		for _, value := range values {
+			headers = append(headers, struct {
+				Name  string
+				Value string
+			}{
+				Name:  name,
+				Value: value,
+			})
+		}
+	}
+
+	// Sort headers alphabetically by name
+	sort.Slice(headers, func(i, j int) bool {
+		return headers[i].Name < headers[j].Name
+	})
 
 	data := struct {
-		ClientIP        string
-		XForwardedFor   string
-		XForwardedHost  string
-		XForwardedProto string
-		Host            string
+		ClientIP string
+		Headers  []struct {
+			Name  string
+			Value string
+		}
 	}{
-		ClientIP:        clientIP,
-		XForwardedFor:   xForwardedFor,
-		XForwardedHost:  xForwardedHost,
-		XForwardedProto: xForwardedProto,
-		Host:            host,
+		ClientIP: clientIP,
+		Headers:  headers,
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
