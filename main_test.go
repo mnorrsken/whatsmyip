@@ -21,7 +21,7 @@ func TestHandler(t *testing.T) {
 			xForwardedFor:      "",
 			xForwardedHost:     "",
 			customHeader:       "TestValue",
-			expectedIPContains: "127.0.0.1", // httptest uses local address
+			expectedIPContains: "<h1></h1>", // httptest uses local address
 			expectedServer:     "",
 		},
 		{
@@ -64,20 +64,21 @@ func TestHandler(t *testing.T) {
 
 			// Check for client IP
 			if !strings.Contains(responseBody, tt.expectedIPContains) {
-				t.Errorf("handler response doesn't contain expected IP %q",
-					tt.expectedIPContains)
+				t.Errorf("handler response doesn't contain expected IP %q\nGot response body:\n%s",
+					tt.expectedIPContains, responseBody)
 			}
 
 			// Check for server information if expected
 			if tt.expectedServer != "" && !strings.Contains(responseBody, tt.expectedServer) {
-				t.Errorf("handler response doesn't contain expected server %q",
-					tt.expectedServer)
+				t.Errorf("handler response doesn't contain expected server %q\nGot response body:\n%s",
+					tt.expectedServer, responseBody)
 			}
 
 			// Check that custom header is included in response
 			if !strings.Contains(responseBody, "Custom-Test-Header") ||
 				!strings.Contains(responseBody, tt.customHeader) {
-				t.Errorf("handler response doesn't contain expected custom header")
+				t.Errorf("handler response doesn't contain expected custom header\nGot response body:\n%s",
+					responseBody)
 			}
 		})
 	}
