@@ -5,6 +5,7 @@ go 1.24
 require (
 	github.com/onsi/ginkgo/v2 v2.23.3
 	github.com/onsi/gomega v1.36.3
+	github.com/patrickmn/go-cache v2.1.0+incompatible
 )
 
 require (

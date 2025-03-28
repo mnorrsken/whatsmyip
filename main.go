@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/patrickmn/go-cache"
 )
 
 // WhoisInfo stores IP whois lookup information
@@ -33,6 +35,10 @@ type WhoisInfo struct {
 	Org         string  `json:"org"`
 	AS          string  `json:"as"`
 }
+
+// Initialize the cache with a default expiration time of 1 hour and
+// purge expired items every 10 minutes
+var whoisCache = cache.New(1*time.Hour, 10*time.Minute)
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
@@ -90,13 +96,80 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
 
+// isPrivateIP checks if an IP address is in a well-known private range
+func isPrivateIP(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+	}
+
+	// Check for IPv4 private ranges
+	if ip4 := ip.To4(); ip4 != nil {
+		// 10.0.0.0/8
+		if ip4[0] == 10 {
+			return true
+		}
+		// 172.16.0.0/12
+		if ip4[0] == 172 && ip4[1] >= 16 && ip4[1] <= 31 {
+			return true
+		}
+		// 192.168.0.0/16
+		if ip4[0] == 192 && ip4[1] == 168 {
+			return true
+		}
+		// 127.0.0.0/8 (localhost)
+		if ip4[0] == 127 {
+			return true
+		}
+		// 169.254.0.0/16 (link-local)
+		if ip4[0] == 169 && ip4[1] == 254 {
+			return true
+		}
+		// 0.0.0.0
+		if ip4[0] == 0 && ip4[1] == 0 && ip4[2] == 0 && ip4[3] == 0 {
+			return true
+		}
+	} else {
+		// Check for IPv6 private ranges
+		// Check if it's a loopback address (::1)
+		if ip.IsLoopback() {
+			return true
+		}
+		// Check if it's a link-local address (fe80::/10)
+		if ip[0] == 0xfe && (ip[1]&0xc0) == 0x80 {
+			return true
+		}
+		// Check if it's a unique local address (fc00::/7)
+		if (ip[0] & 0xfe) == 0xfc {
+			return true
+		}
+	}
+	return false
+}
+
 func getWhoisInfo(ipAddress string) (*WhoisInfo, error) {
+	// Check if the IP is in a private range
+	if isPrivateIP(ipAddress) {
+		return &WhoisInfo{
+			Status:      "success",
+			Message:     "Private IP address",
+			RegionName:  "Local",
+		}, nil
+	}
+
+	// Check cache first
+	if cachedInfo, found := whoisCache.Get(ipAddress); found {
+		log.Printf("Cache hit for IP: %s", ipAddress)
+		return cachedInfo.(*WhoisInfo), nil
+	}
+
 	// Create an HTTP client with a timeout
 	client := &http.Client{
 		Timeout: 5 * time.Second,
 	}
 
 	// Call ip-api.com for whois information
+	log.Printf("Fetching whois info for IP: %s", ipAddress)
 	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s", ipAddress))
 	if err != nil {
 		return nil, err
@@ -112,6 +185,10 @@ func getWhoisInfo(ipAddress string) (*WhoisInfo, error) {
 	if err := json.Unmarshal(body, &whoisInfo); err != nil {
 		return nil, err
 	}
+
+	// Cache the result
+	whoisCache.Set(ipAddress, &whoisInfo, cache.DefaultExpiration)
+	log.Printf("Cached whois info for IP: %s", ipAddress)
 
 	return &whoisInfo, nil
 }
