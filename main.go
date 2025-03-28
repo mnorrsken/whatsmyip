@@ -1,16 +1,38 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
+	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 )
+
+// WhoisInfo stores IP whois lookup information
+type WhoisInfo struct {
+	Status      string  `json:"status"`
+	Message     string  `json:"message"`
+	Country     string  `json:"country"`
+	CountryCode string  `json:"countryCode"`
+	Region      string  `json:"region"`
+	RegionName  string  `json:"regionName"`
+	City        string  `json:"city"`
+	Zip         string  `json:"zip"`
+	Lat         float64 `json:"lat"`
+	Lon         float64 `json:"lon"`
+	Timezone    string  `json:"timezone"`
+	ISP         string  `json:"isp"`
+	Org         string  `json:"org"`
+	AS          string  `json:"as"`
+}
 
 var tmpl = template.Must(template.ParseFiles("templates/index.html"))
 
@@ -64,8 +86,34 @@ func main() {
 	http.HandleFunc("/", handler)
 
 	listenAddr := *host + ":" + *port
-	log.Printf("Starting server on %s", listenAddr)
+	log.Printf("Starting server on http://%s", listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
+}
+
+func getWhoisInfo(ipAddress string) (*WhoisInfo, error) {
+	// Create an HTTP client with a timeout
+	client := &http.Client{
+		Timeout: 5 * time.Second,
+	}
+
+	// Call ip-api.com for whois information
+	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s", ipAddress))
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var whoisInfo WhoisInfo
+	if err := json.Unmarshal(body, &whoisInfo); err != nil {
+		return nil, err
+	}
+
+	return &whoisInfo, nil
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
@@ -75,12 +123,21 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Get client IP from X-Forwarded-For header or fall back to RemoteAddr
 	clientIP := r.RemoteAddr
+	// Remove port from RemoteAddr if present
+	if host, _, err := net.SplitHostPort(clientIP); err == nil {
+		clientIP = host
+	}
 	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
 		clientIP = forwardedFor
 	}
 
-	// Get current server from X-Forwarded-Host header
-	currentServer := r.Header.Get("X-Forwarded-Host")
+	// Get whois information for the IP
+	whoisInfo, err := getWhoisInfo(clientIP)
+	if err != nil {
+		log.Printf("Error getting whois info: %v", err)
+		// Continue without whois info if there's an error
+		whoisInfo = nil
+	}
 
 	// Collect all headers with filtering logic
 	var headers []struct {
@@ -112,16 +169,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	})
 
 	data := struct {
-		ClientIP      string
-		CurrentServer string
-		Headers       []struct {
+		ClientIP string
+		Headers  []struct {
 			Name  string
 			Value string
 		}
+		WhoisInfo *WhoisInfo
 	}{
-		ClientIP:      clientIP,
-		CurrentServer: currentServer,
-		Headers:       headers,
+		ClientIP:  clientIP,
+		Headers:   headers,
+		WhoisInfo: whoisInfo,
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
