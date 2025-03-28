@@ -11,29 +11,35 @@
         <div class="text-center mb-3">Your IP is</div>
         <h1 class="text-center text-gray-800 text-4xl my-5">{{.ClientIP}}</h1>
         
-        {{if .WhoisInfo}}
-        <div class="mb-5">
-            <h2 class="text-xl font-semibold mb-3">IP Information</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                {{if .WhoisInfo.Country}}<div><span class="font-bold">Country:</span> {{.WhoisInfo.Country}} ({{.WhoisInfo.CountryCode}})</div>{{end}}
-                {{if .WhoisInfo.City}}<div><span class="font-bold">City:</span> {{.WhoisInfo.City}}</div>{{end}}
-                {{if .WhoisInfo.RegionName}}<div><span class="font-bold">Region:</span> {{.WhoisInfo.RegionName}}</div>{{end}}
-                {{if .WhoisInfo.Zip}}<div><span class="font-bold">Zip:</span> {{.WhoisInfo.Zip}}</div>{{end}}
-                {{if .WhoisInfo.Timezone}}<div><span class="font-bold">Timezone:</span> {{.WhoisInfo.Timezone}}</div>{{end}}
-                {{if .WhoisInfo.ISP}}<div><span class="font-bold">ISP:</span> {{.WhoisInfo.ISP}}</div>{{end}}
-                {{if .WhoisInfo.Org}}<div><span class="font-bold">Organization:</span> {{.WhoisInfo.Org}}</div>{{end}}
-                {{if .WhoisInfo.AS}}<div><span class="font-bold">AS:</span> {{.WhoisInfo.AS}}</div>{{end}}
-                {{if .WhoisInfo.Message}}<div><span class="font-bold">Message:</span> {{.WhoisInfo.Message}}</div>{{end}}
+        {{if not .Authenticated}}
+        <div class="text-center p-4 my-4 bg-yellow-100 text-yellow-800 rounded">
+            <p>Authentication required: To view detailed IP information and headers, please provide the Remote-User header.</p>
+        </div>
+        {{else}}
+            {{if .WhoisInfo}}
+            <div class="mb-5">
+                <h2 class="text-xl font-semibold mb-3">IP Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {{if .WhoisInfo.Country}}<div><span class="font-bold">Country:</span> {{.WhoisInfo.Country}} ({{.WhoisInfo.CountryCode}})</div>{{end}}
+                    {{if .WhoisInfo.City}}<div><span class="font-bold">City:</span> {{.WhoisInfo.City}}</div>{{end}}
+                    {{if .WhoisInfo.RegionName}}<div><span class="font-bold">Region:</span> {{.WhoisInfo.RegionName}}</div>{{end}}
+                    {{if .WhoisInfo.Zip}}<div><span class="font-bold">Zip:</span> {{.WhoisInfo.Zip}}</div>{{end}}
+                    {{if .WhoisInfo.Timezone}}<div><span class="font-bold">Timezone:</span> {{.WhoisInfo.Timezone}}</div>{{end}}
+                    {{if .WhoisInfo.ISP}}<div><span class="font-bold">ISP:</span> {{.WhoisInfo.ISP}}</div>{{end}}
+                    {{if .WhoisInfo.Org}}<div><span class="font-bold">Organization:</span> {{.WhoisInfo.Org}}</div>{{end}}
+                    {{if .WhoisInfo.AS}}<div><span class="font-bold">AS:</span> {{.WhoisInfo.AS}}</div>{{end}}
+                    {{if .WhoisInfo.Message}}<div><span class="font-bold">Message:</span> {{.WhoisInfo.Message}}</div>{{end}}
+                </div>
             </div>
-        </div>
-        {{end}}
-        
-        <div class="mb-5">
-            <h2 class="text-xl font-semibold mb-3">Request Headers</h2>
-            {{range .Headers}}
-            <div class="mb-3"><span class="font-bold">{{.Name}}:</span> {{.Value}}</div>
             {{end}}
-        </div>
+            
+            <div class="mb-5">
+                <h2 class="text-xl font-semibold mb-3">Request Headers</h2>
+                {{range .Headers}}
+                <div class="mb-3"><span class="font-bold">{{.Name}}:</span> {{.Value}}</div>
+                {{end}}
+            </div>
+        {{end}}
     </div>
 </body>
 </html>

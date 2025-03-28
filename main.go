@@ -151,9 +151,9 @@ func getWhoisInfo(ipAddress string) (*WhoisInfo, error) {
 	// Check if the IP is in a private range
 	if isPrivateIP(ipAddress) {
 		return &WhoisInfo{
-			Status:      "success",
-			Message:     "Private IP address",
-			RegionName:  "Local",
+			Status:     "success",
+			Message:    "Private IP address",
+			RegionName: "Local",
 		}, nil
 	}
 
@@ -208,42 +208,55 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		clientIP = forwardedFor
 	}
 
-	// Get whois information for the IP
-	whoisInfo, err := getWhoisInfo(clientIP)
-	if err != nil {
-		log.Printf("Error getting whois info: %v", err)
-		// Continue without whois info if there's an error
-		whoisInfo = nil
-	}
+	// Check if the IP is private
+	isPrivate := isPrivateIP(clientIP)
 
-	// Collect all headers with filtering logic
+	// Determine if the request is authenticated
+	isAuthenticated := isPrivate || r.Header.Get("Remote-User") != ""
+
+	// Only get whois information and show headers if authenticated
+	var whoisInfo *WhoisInfo
 	var headers []struct {
 		Name  string
 		Value string
 	}
-	for name, values := range r.Header {
-		lname := strings.ToLower(name)
-		if len(includeHeadersMap) > 0 && !includeHeadersMap[lname] {
-			continue // skip if not in include list
-		}
-		if len(excludeHeadersMap) > 0 && excludeHeadersMap[lname] {
-			continue // skip if in exclude list
-		}
-		for _, value := range values {
-			headers = append(headers, struct {
-				Name  string
-				Value string
-			}{
-				Name:  name,
-				Value: value,
-			})
-		}
-	}
 
-	// Sort headers alphabetically by name
-	sort.Slice(headers, func(i, j int) bool {
-		return headers[i].Name < headers[j].Name
-	})
+	if isAuthenticated {
+		// Get whois information for the IP
+		var err error
+		whoisInfo, err = getWhoisInfo(clientIP)
+		if err != nil {
+			log.Printf("Error getting whois info: %v", err)
+			// Continue without whois info if there's an error
+		}
+
+		// Collect all headers with filtering logic
+		for name, values := range r.Header {
+			lname := strings.ToLower(name)
+			if len(includeHeadersMap) > 0 && !includeHeadersMap[lname] {
+				continue // skip if not in include list
+			}
+			if len(excludeHeadersMap) > 0 && excludeHeadersMap[lname] {
+				continue // skip if in exclude list
+			}
+			for _, value := range values {
+				headers = append(headers, struct {
+					Name  string
+					Value string
+				}{
+					Name:  name,
+					Value: value,
+				})
+			}
+		}
+
+		// Sort headers alphabetically by name
+		sort.Slice(headers, func(i, j int) bool {
+			return headers[i].Name < headers[j].Name
+		})
+	} else {
+		log.Printf("Unauthenticated access from non-private IP %s: Missing Remote-User header", clientIP)
+	}
 
 	data := struct {
 		ClientIP string
@@ -251,11 +264,13 @@ func handler(w http.ResponseWriter, r *http.Request) {
 			Name  string
 			Value string
 		}
-		WhoisInfo *WhoisInfo
+		WhoisInfo     *WhoisInfo
+		Authenticated bool
 	}{
-		ClientIP:  clientIP,
-		Headers:   headers,
-		WhoisInfo: whoisInfo,
+		ClientIP:      clientIP,
+		Headers:       headers,
+		WhoisInfo:     whoisInfo,
+		Authenticated: isAuthenticated,
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {

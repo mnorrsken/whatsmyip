@@ -22,6 +22,8 @@ var _ = Describe("HTTP Handler", func() {
 				req.Header.Set("X-Forwarded-Host", xForwardedHost)
 			}
 			req.Header.Set("Custom-Test-Header", customHeader)
+			// Add Remote-User header for all standard tests to pass with new requirement
+			req.Header.Set("Remote-User", "testuser")
 
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(handler)
@@ -60,6 +62,7 @@ var _ = Describe("HTTP Handler", func() {
 			req.Header.Set("X-Test-1", "Value1")
 			req.Header.Set("X-Test-2", "Value2")
 			req.Header.Set("User-Agent", "GinkgoTest")
+			req.Header.Set("Remote-User", "testuser")
 
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(handler)
@@ -74,6 +77,86 @@ var _ = Describe("HTTP Handler", func() {
 			Expect(responseBody).To(ContainSubstring("Value2"))
 			Expect(responseBody).To(ContainSubstring("User-Agent"))
 			Expect(responseBody).To(ContainSubstring("GinkgoTest"))
+		})
+	})
+
+	Context("When handling Remote-User authentication", func() {
+		It("should show only IP for non-private IP without Remote-User header", func() {
+			req, err := http.NewRequest("GET", "/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Use a public IP address
+			req.Header.Set("X-Forwarded-For", "8.8.8.8")
+			// Intentionally not setting Remote-User
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(handler)
+
+			handler.ServeHTTP(rr, req)
+
+			// Should still return 200 OK
+			Expect(rr.Code).To(Equal(http.StatusOK))
+
+			responseBody := rr.Body.String()
+			// Should contain the IP address
+			Expect(responseBody).To(ContainSubstring("8.8.8.8"))
+
+			// Should not contain headers
+			Expect(responseBody).NotTo(ContainSubstring("X-Forwarded-For"))
+
+			// Should not contain whois information
+			Expect(responseBody).NotTo(ContainSubstring("Country:"))
+			Expect(responseBody).NotTo(ContainSubstring("ISP:"))
+		})
+
+		It("should allow access for non-private IP with Remote-User header", func() {
+			req, err := http.NewRequest("GET", "/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Use a public IP address
+			req.Header.Set("X-Forwarded-For", "8.8.8.8")
+			req.Header.Set("Remote-User", "authenticateduser")
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(handler)
+
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+			responseBody := rr.Body.String()
+
+			// Should contain the IP address
+			Expect(responseBody).To(ContainSubstring("8.8.8.8"))
+
+			// Should contain headers
+			Expect(responseBody).To(ContainSubstring("X-Forwarded-For"))
+			Expect(responseBody).To(ContainSubstring("Remote-User"))
+		})
+
+		It("should show full information for private IP without Remote-User header", func() {
+			req, err := http.NewRequest("GET", "/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Use a private IP address
+			req.Header.Set("X-Forwarded-For", "192.168.1.1")
+			// Intentionally not setting Remote-User
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(handler)
+
+			handler.ServeHTTP(rr, req)
+
+			Expect(rr.Code).To(Equal(http.StatusOK))
+			responseBody := rr.Body.String()
+
+			// Should contain the IP address
+			Expect(responseBody).To(ContainSubstring("192.168.1.1"))
+
+			// Should contain headers
+			Expect(responseBody).To(ContainSubstring("X-Forwarded-For"))
+
+			// Should contain whois information
+			Expect(responseBody).To(ContainSubstring("Private IP address"))
 		})
 	})
 })
