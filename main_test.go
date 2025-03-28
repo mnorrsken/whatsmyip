@@ -3,83 +3,77 @@ package main
 import (
 	"net/http"
 	"net/http/httptest"
-	"strings"
-	"testing"
+
+	. "github.com/onsi/ginkgo/v2"
+	. "github.com/onsi/gomega"
 )
 
-func TestHandler(t *testing.T) {
-	tests := []struct {
-		name               string
-		xForwardedFor      string
-		xForwardedHost     string
-		customHeader       string
-		expectedIPContains string
-		expectedServer     string
-	}{
-		{
-			name:               "No forwarded headers",
-			xForwardedFor:      "",
-			xForwardedHost:     "",
-			customHeader:       "TestValue",
-			expectedIPContains: "<h1></h1>", // httptest uses local address
-			expectedServer:     "",
-		},
-		{
-			name:               "With forwarded headers",
-			xForwardedFor:      "192.0.2.1",
-			xForwardedHost:     "example.com",
-			customHeader:       "AnotherValue",
-			expectedIPContains: "192.0.2.1",
-			expectedServer:     "example.com",
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+var _ = Describe("HTTP Handler", func() {
+	DescribeTable("Client IP and headers display",
+		func(xForwardedFor, xForwardedHost, customHeader, expectedIPContains, expectedServer string) {
 			req, err := http.NewRequest("GET", "/", nil)
-			if err != nil {
-				t.Fatal(err)
-			}
+			Expect(err).NotTo(HaveOccurred())
 
 			// Set headers for test
-			if tt.xForwardedFor != "" {
-				req.Header.Set("X-Forwarded-For", tt.xForwardedFor)
+			if xForwardedFor != "" {
+				req.Header.Set("X-Forwarded-For", xForwardedFor)
 			}
-			if tt.xForwardedHost != "" {
-				req.Header.Set("X-Forwarded-Host", tt.xForwardedHost)
+			if xForwardedHost != "" {
+				req.Header.Set("X-Forwarded-Host", xForwardedHost)
 			}
-			req.Header.Set("Custom-Test-Header", tt.customHeader)
+			req.Header.Set("Custom-Test-Header", customHeader)
 
 			rr := httptest.NewRecorder()
 			handler := http.HandlerFunc(handler)
 
 			handler.ServeHTTP(rr, req)
 
-			if status := rr.Code; status != http.StatusOK {
-				t.Errorf("handler returned wrong status code: got %v want %v",
-					status, http.StatusOK)
-			}
+			// Check status code
+			Expect(rr.Code).To(Equal(http.StatusOK))
 
 			responseBody := rr.Body.String()
 
 			// Check for client IP
-			if !strings.Contains(responseBody, tt.expectedIPContains) {
-				t.Errorf("handler response doesn't contain expected IP %q\nGot response body:\n%s",
-					tt.expectedIPContains, responseBody)
+			if expectedIPContains != "<h1></h1>" {
+				Expect(responseBody).To(ContainSubstring(expectedIPContains))
 			}
 
 			// Check for server information if expected
-			if tt.expectedServer != "" && !strings.Contains(responseBody, tt.expectedServer) {
-				t.Errorf("handler response doesn't contain expected server %q\nGot response body:\n%s",
-					tt.expectedServer, responseBody)
+			if expectedServer != "" {
+				Expect(responseBody).To(ContainSubstring(expectedServer))
 			}
 
 			// Check that custom header is included in response
-			if !strings.Contains(responseBody, "Custom-Test-Header") ||
-				!strings.Contains(responseBody, tt.customHeader) {
-				t.Errorf("handler response doesn't contain expected custom header\nGot response body:\n%s",
-					responseBody)
-			}
+			Expect(responseBody).To(ContainSubstring("Custom-Test-Header"))
+			Expect(responseBody).To(ContainSubstring(customHeader))
+		},
+		Entry("No forwarded headers", "", "", "TestValue", "<h1", ""),
+		Entry("With forwarded headers", "192.0.2.1", "example.com", "AnotherValue", "192.0.2.1", "example.com"),
+	)
+
+	Context("When handling specific header cases", func() {
+		It("should include multiple headers in the response", func() {
+			req, err := http.NewRequest("GET", "/", nil)
+			Expect(err).NotTo(HaveOccurred())
+
+			// Set multiple test headers
+			req.Header.Set("X-Test-1", "Value1")
+			req.Header.Set("X-Test-2", "Value2")
+			req.Header.Set("User-Agent", "GinkgoTest")
+
+			rr := httptest.NewRecorder()
+			handler := http.HandlerFunc(handler)
+
+			handler.ServeHTTP(rr, req)
+
+			responseBody := rr.Body.String()
+			Expect(rr.Code).To(Equal(http.StatusOK))
+			Expect(responseBody).To(ContainSubstring("X-Test-1"))
+			Expect(responseBody).To(ContainSubstring("Value1"))
+			Expect(responseBody).To(ContainSubstring("X-Test-2"))
+			Expect(responseBody).To(ContainSubstring("Value2"))
+			Expect(responseBody).To(ContainSubstring("User-Agent"))
+			Expect(responseBody).To(ContainSubstring("GinkgoTest"))
 		})
-	}
-}
+	})
+})

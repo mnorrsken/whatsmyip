@@ -9,8 +9,8 @@ ARG TARGETARCH
 WORKDIR /app
 
 # Copy the Go module files and download dependencies
-# COPY go.mod go.sum ./
-# RUN go mod download
+COPY go.mod go.sum ./
+RUN go mod download
 
 # Copy the rest of the application code
 COPY . .
