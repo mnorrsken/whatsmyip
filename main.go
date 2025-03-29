@@ -194,9 +194,21 @@ func getWhoisInfo(ipAddress string) (*WhoisInfo, error) {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
-	log.Printf("Received request from %s", r.RemoteAddr)
-	log.Printf("Request method: %s, URL path: %s", r.Method, r.URL.Path)
-	log.Printf("User agent: %s", r.UserAgent())
+	// Log request in Apache Combined Log Format
+	// Format: %h %l %u %t "%r" %>s %b "%{Referer}i" "%{User-agent}i"
+	timeFormatted := time.Now().Format("02/Jan/2006:15:04:05 -0700")
+	requestLine := fmt.Sprintf("%s %s %s", r.Method, r.URL.RequestURI(), r.Proto)
+	statusCode := 200 // Will be overwritten by actual status
+	contentLength := "-"
+	referer := r.Header.Get("Referer")
+	if referer == "" {
+		referer = "-"
+	}
+	userAgent := r.UserAgent()
+	if userAgent == "" {
+		userAgent = "-"
+	}
+	
 
 	// Get client IP from X-Forwarded-For header or fall back to RemoteAddr
 	clientIP := r.RemoteAddr
@@ -213,6 +225,16 @@ func handler(w http.ResponseWriter, r *http.Request) {
 
 	// Determine if the request is authenticated
 	isAuthenticated := isPrivate || r.Header.Get("Remote-User") != ""
+
+	username := r.Header.Get("Remote-User")
+	if username == "" {
+		username = "-"
+	}
+
+	log.Printf("%s - %s [%s] \"%s\" %d %s \"%s\" \"%s\"", 
+		clientIP, username, timeFormatted, requestLine, 
+		statusCode, contentLength, referer, userAgent)
+
 
 	// Only get whois information and show headers if authenticated
 	var whoisInfo *WhoisInfo
