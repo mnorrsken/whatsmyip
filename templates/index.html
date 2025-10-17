@@ -7,9 +7,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="font-sans bg-gray-100 m-0 p-0">
-    <div class="max-w-3xl mx-auto my-12 p-5 bg-white shadow-md">
-        <div class="text-center mb-3">Your IP is</div>
-        <h1 class="text-center text-gray-800 text-4xl my-5">{{.ClientIP}}</h1>
+    <div class="max-w-6xl mx-auto my-12 px-8 py-10 bg-white shadow-lg rounded-3xl">
+        <div class="flex justify-center mb-10">
+            <div class="w-full max-w-4xl rounded-3xl border border-blue-200 bg-blue-50 px-10 py-8 text-center shadow-inner">
+                <div class="text-sm font-semibold uppercase tracking-widest text-blue-600">Your IP Address</div>
+                <div class="mt-4 flex flex-col items-center gap-3">
+                    <div class="relative inline-block">
+                        <h1 id="client-ip" class="inline-block text-5xl font-semibold text-gray-800">{{.ClientIP}}</h1>
+                        <span id="copy-ip" role="button" tabindex="0" class="absolute left-full top-0 ml-3 inline-flex items-center justify-center text-blue-600 text-lg cursor-pointer select-none transition hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300/60" aria-label="Copy IP address">
+                            &#x2398;
+                            <span class="sr-only">Copy</span>
+                        </span>
+                    </div>
+                    <span id="copy-feedback" class="text-sm font-semibold text-green-600 opacity-0 transition-opacity duration-300">Copied!</span>
+                </div>
+            </div>
+        </div>
         
         {{if not .Authenticated}}
         <div class="text-center p-4 my-4 bg-yellow-100 text-yellow-800 rounded">
@@ -34,12 +47,69 @@
             {{end}}
             
             <div class="mb-5">
-                <h2 class="text-xl font-semibold mb-3">Request Headers</h2>
-                {{range .Headers}}
-                <div class="mb-3"><span class="font-bold">{{.Name}}:</span> {{.Value}}</div>
-                {{end}}
+                <h2 class="text-xl font-semibold mb-4">Request Headers</h2>
+                <div class="overflow-x-auto rounded-2xl border border-gray-200">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide text-gray-600">Header</th>
+                                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide text-gray-600">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-200 bg-white">
+                            {{range .Headers}}
+                            <tr class="transition hover:bg-gray-50">
+                                <td class="px-4 py-3 font-medium text-gray-700 whitespace-nowrap">{{.Name}}</td>
+                                <td class="px-4 py-3 text-gray-600 break-all">{{.Value}}</td>
+                            </tr>
+                            {{end}}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         {{end}}
     </div>
+    <script>
+    (function () {
+        const copyButton = document.getElementById('copy-ip');
+        const ipValue = document.getElementById('client-ip');
+        const feedback = document.getElementById('copy-feedback');
+
+        if (!copyButton || !ipValue || !feedback) {
+            return;
+        }
+
+        const triggerCopy = async function () {
+            try {
+                await navigator.clipboard.writeText(ipValue.textContent || '');
+                feedback.classList.remove('opacity-0');
+                feedback.classList.add('opacity-100');
+                setTimeout(function () {
+                    feedback.classList.add('opacity-0');
+                    feedback.classList.remove('opacity-100');
+                }, 1500);
+            } catch (error) {
+                feedback.textContent = 'Copy failed';
+                feedback.classList.remove('text-green-600');
+                feedback.classList.add('text-red-600');
+                feedback.classList.remove('opacity-0');
+                setTimeout(function () {
+                    feedback.classList.add('opacity-0');
+                    feedback.classList.remove('text-red-600');
+                    feedback.classList.add('text-green-600');
+                    feedback.textContent = 'Copied!';
+                }, 2000);
+            }
+        };
+
+        copyButton.addEventListener('click', triggerCopy);
+        copyButton.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                triggerCopy();
+            }
+        });
+    })();
+</script>
 </body>
 </html>
