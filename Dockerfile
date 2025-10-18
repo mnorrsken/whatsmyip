@@ -25,5 +25,7 @@ FROM scratch
 COPY --from=builder /app/whatsmyip /whatsmyip
 COPY templates /templates
 
+ENV WHOIS_BASE_URL=http://ip-api.com/json
+
 # Set the command to run the application
 CMD ["/whatsmyip"]

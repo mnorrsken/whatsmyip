@@ -7,10 +7,13 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/patrickmn/go-cache"
 )
+
+const defaultWhoisBaseURL = "http://ip-api.com/json"
 
 // WhoisInfo stores IP whois lookup information.
 type WhoisInfo struct {
@@ -37,15 +40,23 @@ type LookupService interface {
 
 // WhoisService provides whois lookup backed by a cache and http client.
 type WhoisService struct {
-	cache  *cache.Cache
-	client *http.Client
+	cache   *cache.Cache
+	client  *http.Client
+	baseURL string
 }
 
 // NewWhoisService initializes a WhoisService with sensible defaults.
-func NewWhoisService() *WhoisService {
+func NewWhoisService(baseURL string) *WhoisService {
+	normalized := strings.TrimSpace(baseURL)
+	normalized = strings.TrimSuffix(normalized, "/")
+	if normalized == "" {
+		normalized = defaultWhoisBaseURL
+	}
+
 	return &WhoisService{
-		cache:  cache.New(1*time.Hour, 10*time.Minute),
-		client: &http.Client{Timeout: 5 * time.Second},
+		cache:   cache.New(1*time.Hour, 10*time.Minute),
+		client:  &http.Client{Timeout: 5 * time.Second},
+		baseURL: normalized,
 	}
 }
 
@@ -68,8 +79,15 @@ func (s *WhoisService) Lookup(ipAddress string) (*WhoisInfo, error) {
 		client = &http.Client{Timeout: 5 * time.Second}
 	}
 
+	baseURL := s.baseURL
+	if baseURL == "" {
+		baseURL = defaultWhoisBaseURL
+	}
+
+	endpoint := fmt.Sprintf("%s/%s", baseURL, ipAddress)
+
 	log.Printf("Fetching whois info for IP: %s", ipAddress)
-	resp, err := client.Get(fmt.Sprintf("http://ip-api.com/json/%s", ipAddress))
+	resp, err := client.Get(endpoint)
 	if err != nil {
 		return nil, err
 	}

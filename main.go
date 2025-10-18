@@ -39,8 +39,10 @@ func main() {
 	includeHeaders := parseHeaderList(*includeFlag)
 	excludeHeaders := parseHeaderList(*excludeFlag)
 
+	whoisBaseURL := os.Getenv("WHOIS_BASE_URL")
+
 	tmpl := template.Must(template.ParseFiles("templates/index.html"))
-	server := NewServer(tmpl, NewWhoisService(), includeHeaders, excludeHeaders)
+	server := NewServer(tmpl, NewWhoisService(whoisBaseURL), includeHeaders, excludeHeaders)
 
 	listenAddr := *host + ":" + *port
 
