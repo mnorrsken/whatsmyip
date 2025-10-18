@@ -1,12 +1,40 @@
 package main
 
 import (
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 )
+
+var testTemplate = template.Must(template.ParseFiles("templates/index.html"))
+
+type stubWhoisService struct{}
+
+func (stubWhoisService) Lookup(ip string) (*WhoisInfo, error) {
+	if isPrivateIP(ip) {
+		return &WhoisInfo{
+			Status:     "success",
+			Message:    "Private IP address",
+			RegionName: "Local",
+		}, nil
+	}
+
+	return &WhoisInfo{
+		Status:      "success",
+		Country:     "TestCountry",
+		CountryCode: "TC",
+		City:        "TestCity",
+		ISP:         "TestISP",
+		Org:         "TestOrg",
+	}, nil
+}
+
+func newTestServer() *Server {
+	return NewServer(testTemplate, stubWhoisService{}, nil, nil)
+}
 
 var _ = Describe("HTTP Handler", func() {
 	DescribeTable("Client IP and headers display",
@@ -26,9 +54,9 @@ var _ = Describe("HTTP Handler", func() {
 			req.Header.Set("Remote-User", "testuser")
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler)
+			server := newTestServer()
 
-			handler.ServeHTTP(rr, req)
+			server.ServeHTTP(rr, req)
 
 			// Check status code
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -65,9 +93,9 @@ var _ = Describe("HTTP Handler", func() {
 			req.Header.Set("Remote-User", "testuser")
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler)
+			server := newTestServer()
 
-			handler.ServeHTTP(rr, req)
+			server.ServeHTTP(rr, req)
 
 			responseBody := rr.Body.String()
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -90,9 +118,9 @@ var _ = Describe("HTTP Handler", func() {
 			// Intentionally not setting Remote-User
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler)
+			server := newTestServer()
 
-			handler.ServeHTTP(rr, req)
+			server.ServeHTTP(rr, req)
 
 			// Should still return 200 OK
 			Expect(rr.Code).To(Equal(http.StatusOK))
@@ -118,9 +146,9 @@ var _ = Describe("HTTP Handler", func() {
 			req.Header.Set("Remote-User", "authenticateduser")
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler)
+			server := newTestServer()
 
-			handler.ServeHTTP(rr, req)
+			server.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			responseBody := rr.Body.String()
@@ -142,9 +170,9 @@ var _ = Describe("HTTP Handler", func() {
 			// Intentionally not setting Remote-User
 
 			rr := httptest.NewRecorder()
-			handler := http.HandlerFunc(handler)
+			server := newTestServer()
 
-			handler.ServeHTTP(rr, req)
+			server.ServeHTTP(rr, req)
 
 			Expect(rr.Code).To(Equal(http.StatusOK))
 			responseBody := rr.Body.String()
