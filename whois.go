@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/patrickmn/go-cache"
+	"github.com/jellydator/ttlcache/v3"
 )
 
 const defaultWhoisBaseURL = "http://ip-api.com/json"
@@ -40,7 +40,7 @@ type LookupService interface {
 
 // WhoisService provides whois lookup backed by a cache and http client.
 type WhoisService struct {
-	cache   *cache.Cache
+	cache   *ttlcache.Cache[string, *WhoisInfo]
 	client  *http.Client
 	baseURL string
 }
@@ -53,8 +53,14 @@ func NewWhoisService(baseURL string) *WhoisService {
 		normalized = defaultWhoisBaseURL
 	}
 
+	c := ttlcache.New[string, *WhoisInfo](
+		ttlcache.WithTTL[string, *WhoisInfo](1*time.Hour),
+		ttlcache.WithDisableTouchOnHit[string, *WhoisInfo](),
+	)
+	go c.Start()
+
 	return &WhoisService{
-		cache:   cache.New(1*time.Hour, 10*time.Minute),
+		cache:   c,
 		client:  &http.Client{Timeout: 5 * time.Second},
 		baseURL: normalized,
 	}
@@ -114,11 +120,9 @@ func (s *WhoisService) cacheLookup(ipAddress string) *WhoisInfo {
 		return nil
 	}
 
-	if cachedInfo, found := s.cache.Get(ipAddress); found {
-		if info, ok := cachedInfo.(*WhoisInfo); ok {
-			log.Printf("Cache hit for IP: %s", ipAddress)
-			return info
-		}
+	if item := s.cache.Get(ipAddress); item != nil {
+		log.Printf("Cache hit for IP: %s", ipAddress)
+		return item.Value()
 	}
 
 	return nil
@@ -129,7 +133,7 @@ func (s *WhoisService) storeInCache(ipAddress string, info *WhoisInfo) {
 		return
 	}
 
-	s.cache.Set(ipAddress, info, cache.DefaultExpiration)
+	s.cache.Set(ipAddress, info, ttlcache.DefaultTTL)
 }
 
 // isPrivateIP checks if an IP address is in a well-known private range.
