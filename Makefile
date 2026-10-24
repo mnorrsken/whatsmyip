@@ -1,51 +1,57 @@
-# Variables
-APP_NAME := whatsmyip
-BUILD_DIR := build
-DOCKER_IMAGE := whatsmyip
-DOCKER_TAG := latest
+BINARY := whatsmyip
+IMAGE  := whatsmyip:dev
+TRIVY  ?= aquasec/trivy:0.76.1
 
-# Default target
-.PHONY: all
+.PHONY: all build run test race vet fmt lint helm-lint docker-build scan clean help
+
 all: build
 
-# Build the application binary
-.PHONY: build
 build:
-	@echo "Building $(APP_NAME)..."
-	@mkdir -p $(BUILD_DIR)
-	@CGO_ENABLED=0 go build -o $(BUILD_DIR)/$(APP_NAME) .
+	CGO_ENABLED=0 go build -trimpath -ldflags '-s -w' -o bin/$(BINARY) .
 
-# Run the application
-.PHONY: run
 run:
-	@echo "Running $(APP_NAME)..."
-	@go run .
+	go run .
 
-# Run tests
-.PHONY: test
 test:
-	@echo "Running tests..."
-	@go test -v ./...
+	go test ./...
 
-# Build Docker image
-.PHONY: docker
-docker:
-	@echo "Building Docker image $(DOCKER_IMAGE):$(DOCKER_TAG)..."
-	@docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) .
+race:
+	go test -race ./...
 
-# Clean build artifacts
-.PHONY: clean
+vet:
+	go vet ./...
+
+fmt:
+	gofmt -w .
+
+lint:
+	golangci-lint run ./...
+
+helm-lint:
+	helm lint charts/$(BINARY)
+	helm template t charts/$(BINARY) > /dev/null
+
+docker-build:
+	docker build -t $(IMAGE) .
+
+# Trivy, as in CI: the source tree (dependencies, secrets) and a fresh
+# image. Fails on any vulnerability that has a fix.
+scan: docker-build
+	docker run --rm -v $(HOME)/.cache/trivy:/root/.cache/trivy -v $(CURDIR):/src:ro $(TRIVY) fs --quiet \
+		--scanners vuln,secret --ignore-unfixed --exit-code 1 --skip-dirs bin /src
+	docker run --rm -v $(HOME)/.cache/trivy:/root/.cache/trivy -v /var/run/docker.sock:/var/run/docker.sock $(TRIVY) image --quiet \
+		--scanners vuln --ignore-unfixed --exit-code 1 $(IMAGE)
+
 clean:
-	@echo "Cleaning build artifacts..."
-	@rm -rf $(BUILD_DIR)
+	rm -rf bin .helm-packages
 
-# Help command
-.PHONY: help
 help:
-	@echo "Available commands:"
-	@echo "  make build   - Build the $(APP_NAME) binary"
-	@echo "  make run     - Run the application with go run"
-	@echo "  make test    - Run tests"
-	@echo "  make docker  - Build Docker image"
-	@echo "  make clean   - Remove build artifacts"
-	@echo "  make help    - Show this help message"
+	@echo "build         Build bin/$(BINARY)"
+	@echo "run           Run with go run"
+	@echo "test / race   Run tests (race: with -race)"
+	@echo "vet / fmt     go vet / gofmt -w"
+	@echo "lint          golangci-lint"
+	@echo "helm-lint     Lint and render the Helm chart"
+	@echo "docker-build  Build $(IMAGE)"
+	@echo "scan          Trivy scan of source and image"
+	@echo "clean         Remove build output"

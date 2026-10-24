@@ -1,0 +1,13 @@
+{{- if .Values.ingress.enabled }}
+Open:
+{{- range .Values.ingress.hosts }}
+  http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}/
+{{- end }}
+{{- else }}
+Open it with a port-forward:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "whatsmyip.fullname" . }} 8080:{{ .Values.service.port }}
+  then browse to http://localhost:8080/
+{{- end }}
+
+Visitors from public IPs see only their IP unless the ingress or an
+authenticating proxy sets the Remote-User header.

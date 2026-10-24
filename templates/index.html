@@ -3,72 +3,216 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Client IP and Headers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <meta name="color-scheme" content="light dark">
+    <title>What's my IP</title>
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --card: #ffffff;
+            --text: #1f2937;
+            --muted: #6b7280;
+            --border: #e5e7eb;
+            --accent: #2563eb;
+            --accent-soft: #eff6ff;
+            --accent-border: #bfdbfe;
+            --row-hover: #f9fafb;
+            --ok: #16a34a;
+            --err: #dc2626;
+            --warn-bg: #fef9c3;
+            --warn-text: #854d0e;
+        }
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #0f172a;
+                --card: #1e293b;
+                --text: #e2e8f0;
+                --muted: #94a3b8;
+                --border: #334155;
+                --accent: #60a5fa;
+                --accent-soft: #172554;
+                --accent-border: #1e3a8a;
+                --row-hover: #273449;
+                --ok: #4ade80;
+                --err: #f87171;
+                --warn-bg: #422006;
+                --warn-text: #fde68a;
+            }
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            background: var(--bg);
+            color: var(--text);
+            font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        }
+        main {
+            max-width: 64rem;
+            margin: 3rem auto;
+            padding: 2.5rem 2rem;
+            background: var(--card);
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgb(0 0 0 / 0.08);
+        }
+        .ip-card {
+            max-width: 52rem;
+            margin: 0 auto 2.5rem;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            background: var(--accent-soft);
+            border: 1px solid var(--accent-border);
+            border-radius: 1.5rem;
+        }
+        .label {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            color: var(--accent);
+        }
+        .ip-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            margin-top: 1rem;
+        }
+        #client-ip {
+            margin: 0;
+            font: 600 clamp(1.75rem, 6vw, 3rem)/1.2 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            overflow-wrap: anywhere;
+        }
+        #copy-ip {
+            padding: 0.35rem 0.8rem;
+            font: inherit;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: transparent;
+            border: 1px solid var(--accent-border);
+            border-radius: 999px;
+            cursor: pointer;
+        }
+        #copy-ip:hover { background: var(--card); }
+        #copy-ip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        #copy-feedback {
+            display: block;
+            min-height: 1.5em;
+            margin-top: 0.5rem;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--ok);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        #copy-feedback.show { opacity: 1; }
+        #copy-feedback.error { color: var(--err); }
+        .notice {
+            padding: 1rem;
+            text-align: center;
+            background: var(--warn-bg);
+            color: var(--warn-text);
+            border-radius: 0.75rem;
+        }
+        section { margin-bottom: 2rem; }
+        h2 { margin: 0 0 1rem; font-size: 1.25rem; }
+        .info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+            gap: 0.5rem 1.5rem;
+            margin: 0;
+        }
+        .info div { display: flex; gap: 0.5rem; }
+        .info dt { font-weight: 700; }
+        .info dt::after { content: ":"; }
+        .info dd { margin: 0; overflow-wrap: anywhere; }
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border);
+            border-radius: 1rem;
+        }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 0.75rem 1rem; text-align: left; vertical-align: top; }
+        th {
+            font-size: 0.8rem;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            color: var(--muted);
+            border-bottom: 1px solid var(--border);
+        }
+        td { border-top: 1px solid var(--border); }
+        tr:first-child td { border-top: 0; }
+        tbody tr:hover { background: var(--row-hover); }
+        td:first-child { font-weight: 500; white-space: nowrap; }
+        td:last-child {
+            color: var(--muted);
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 0.9rem;
+            word-break: break-all;
+        }
+        @media (max-width: 640px) {
+            main { margin: 0; padding: 1.5rem 1rem; border-radius: 0; box-shadow: none; }
+            .ip-card { padding: 1.5rem 1rem; }
+        }
+    </style>
 </head>
-<body class="font-sans bg-gray-100 m-0 p-0">
-    <div class="max-w-6xl mx-auto my-12 px-8 py-10 bg-white shadow-lg rounded-3xl">
-        <div class="flex justify-center mb-10">
-            <div class="w-full max-w-4xl rounded-3xl border border-blue-200 bg-blue-50 px-10 py-8 text-center shadow-inner">
-                <div class="text-sm font-semibold uppercase tracking-widest text-blue-600">Your IP Address</div>
-                <div class="mt-4 flex flex-col items-center gap-3">
-                    <div class="relative inline-block">
-                        <h1 id="client-ip" class="inline-block text-5xl font-semibold text-gray-800">{{.ClientIP}}</h1>
-                        <span id="copy-ip" role="button" tabindex="0" class="absolute left-full top-0 ml-3 inline-flex items-center justify-center text-blue-600 text-lg cursor-pointer select-none transition hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-300/60" aria-label="Copy IP address">
-                            &#x2398;
-                            <span class="sr-only">Copy</span>
-                        </span>
-                    </div>
-                    <span id="copy-feedback" class="text-sm font-semibold text-green-600 opacity-0 transition-opacity duration-300">Copied!</span>
-                </div>
+<body>
+    <main>
+        <div class="ip-card">
+            <div class="label">Your IP Address</div>
+            <div class="ip-row">
+                <h1 id="client-ip">{{.ClientIP}}</h1>
+                <button id="copy-ip" type="button" aria-label="Copy IP address">Copy</button>
             </div>
+            <span id="copy-feedback" role="status" aria-live="polite"></span>
         </div>
-        
+
         {{if not .Authenticated}}
-        <div class="text-center p-4 my-4 bg-yellow-100 text-yellow-800 rounded">
+        <div class="notice">
             <p>Authentication required to view detailed IP information.</p>
         </div>
         {{else}}
             {{if .WhoisInfo}}
-            <div class="mb-5">
-                <h2 class="text-xl font-semibold mb-3">IP Information</h2>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    {{if .WhoisInfo.Country}}<div><span class="font-bold">Country:</span> {{.WhoisInfo.Country}} ({{.WhoisInfo.CountryCode}})</div>{{end}}
-                    {{if .WhoisInfo.City}}<div><span class="font-bold">City:</span> {{.WhoisInfo.City}}</div>{{end}}
-                    {{if .WhoisInfo.RegionName}}<div><span class="font-bold">Region:</span> {{.WhoisInfo.RegionName}}</div>{{end}}
-                    {{if .WhoisInfo.Zip}}<div><span class="font-bold">Zip:</span> {{.WhoisInfo.Zip}}</div>{{end}}
-                    {{if .WhoisInfo.Timezone}}<div><span class="font-bold">Timezone:</span> {{.WhoisInfo.Timezone}}</div>{{end}}
-                    {{if .WhoisInfo.ISP}}<div><span class="font-bold">ISP:</span> {{.WhoisInfo.ISP}}</div>{{end}}
-                    {{if .WhoisInfo.Org}}<div><span class="font-bold">Organization:</span> {{.WhoisInfo.Org}}</div>{{end}}
-                    {{if .WhoisInfo.AS}}<div><span class="font-bold">AS:</span> {{.WhoisInfo.AS}}</div>{{end}}
-                    {{if .WhoisInfo.Message}}<div><span class="font-bold">Message:</span> {{.WhoisInfo.Message}}</div>{{end}}
-                </div>
-            </div>
+            <section>
+                <h2>IP Information</h2>
+                <dl class="info">
+                    {{if .WhoisInfo.Country}}<div><dt>Country</dt><dd>{{.WhoisInfo.Country}} ({{.WhoisInfo.CountryCode}})</dd></div>{{end}}
+                    {{if .WhoisInfo.City}}<div><dt>City</dt><dd>{{.WhoisInfo.City}}</dd></div>{{end}}
+                    {{if .WhoisInfo.RegionName}}<div><dt>Region</dt><dd>{{.WhoisInfo.RegionName}}</dd></div>{{end}}
+                    {{if .WhoisInfo.Zip}}<div><dt>Zip</dt><dd>{{.WhoisInfo.Zip}}</dd></div>{{end}}
+                    {{if .WhoisInfo.Timezone}}<div><dt>Timezone</dt><dd>{{.WhoisInfo.Timezone}}</dd></div>{{end}}
+                    {{if .WhoisInfo.ISP}}<div><dt>ISP</dt><dd>{{.WhoisInfo.ISP}}</dd></div>{{end}}
+                    {{if .WhoisInfo.Org}}<div><dt>Organization</dt><dd>{{.WhoisInfo.Org}}</dd></div>{{end}}
+                    {{if .WhoisInfo.AS}}<div><dt>AS</dt><dd>{{.WhoisInfo.AS}}</dd></div>{{end}}
+                    {{if .WhoisInfo.Message}}<div><dt>Message</dt><dd>{{.WhoisInfo.Message}}</dd></div>{{end}}
+                </dl>
+            </section>
             {{end}}
-            
-            <div class="mb-5">
-                <h2 class="text-xl font-semibold mb-4">Request Headers</h2>
-                <div class="overflow-x-auto rounded-2xl border border-gray-200">
-                    <table class="min-w-full divide-y divide-gray-200">
-                        <thead class="bg-gray-50">
+
+            <section>
+                <h2>Request Headers</h2>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
                             <tr>
-                                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide text-gray-600">Header</th>
-                                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold uppercase tracking-wide text-gray-600">Value</th>
+                                <th scope="col">Header</th>
+                                <th scope="col">Value</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 bg-white">
+                        <tbody>
                             {{range .Headers}}
-                            <tr class="transition hover:bg-gray-50">
-                                <td class="px-4 py-3 font-medium text-gray-700 whitespace-nowrap">{{.Name}}</td>
-                                <td class="px-4 py-3 text-gray-600 break-all">{{.Value}}</td>
+                            <tr>
+                                <td>{{.Name}}</td>
+                                <td>{{.Value}}</td>
                             </tr>
                             {{end}}
                         </tbody>
                     </table>
                 </div>
-            </div>
+            </section>
         {{end}}
-    </div>
+    </main>
     <script>
     (function () {
         const copyButton = document.getElementById('copy-ip');
@@ -79,37 +223,26 @@
             return;
         }
 
-        const triggerCopy = async function () {
-            try {
-                await navigator.clipboard.writeText(ipValue.textContent || '');
-                feedback.classList.remove('opacity-0');
-                feedback.classList.add('opacity-100');
-                setTimeout(function () {
-                    feedback.classList.add('opacity-0');
-                    feedback.classList.remove('opacity-100');
-                }, 1500);
-            } catch (error) {
-                feedback.textContent = 'Copy failed';
-                feedback.classList.remove('text-green-600');
-                feedback.classList.add('text-red-600');
-                feedback.classList.remove('opacity-0');
-                setTimeout(function () {
-                    feedback.classList.add('opacity-0');
-                    feedback.classList.remove('text-red-600');
-                    feedback.classList.add('text-green-600');
-                    feedback.textContent = 'Copied!';
-                }, 2000);
-            }
+        let timer;
+        const show = function (text, isError) {
+            feedback.textContent = text;
+            feedback.classList.toggle('error', isError);
+            feedback.classList.add('show');
+            clearTimeout(timer);
+            timer = setTimeout(function () {
+                feedback.classList.remove('show');
+            }, isError ? 2000 : 1500);
         };
 
-        copyButton.addEventListener('click', triggerCopy);
-        copyButton.addEventListener('keydown', function (event) {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                triggerCopy();
+        copyButton.addEventListener('click', async function () {
+            try {
+                await navigator.clipboard.writeText(ipValue.textContent.trim());
+                show('Copied!', false);
+            } catch (error) {
+                show('Copy failed', true);
             }
         });
     })();
-</script>
+    </script>
 </body>
 </html>

@@ -1,0 +1,16 @@
+apiVersion: v2
+name: whatsmyip
+description: Shows the client IP, whois details and request headers
+type: application
+# version and appVersion are set from the git tag by the release workflow.
+version: 0.0.0
+appVersion: "0.0.0"
+keywords:
+  - ip
+  - whois
+  - headers
+home: https://github.com/mnorrsken/whatsmyip
+sources:
+  - https://github.com/mnorrsken/whatsmyip
+maintainers:
+  - name: mnorrsken
