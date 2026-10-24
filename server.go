@@ -167,13 +167,37 @@ func (s *Server) collectHeaders(header http.Header) []headerEntry {
 	return entries
 }
 
+// resolveClientIP returns the client address. X-Forwarded-For is only used
+// when the direct peer is a trusted proxy (a private address), and is read
+// right to left: each proxy appends the address it received the request
+// from, so the first address that is not a trusted proxy is the client.
+// Entries left of it come from the client and may be forged.
 func (s *Server) resolveClientIP(r *http.Request) string {
 	clientIP := r.RemoteAddr
 	if host, _, err := net.SplitHostPort(clientIP); err == nil {
 		clientIP = host
 	}
-	if forwardedFor := r.Header.Get("X-Forwarded-For"); forwardedFor != "" {
-		clientIP = forwardedFor
+	if !isPrivateIP(clientIP) {
+		return clientIP
+	}
+
+	var hops []string
+	for _, value := range r.Header.Values("X-Forwarded-For") {
+		for hop := range strings.SplitSeq(value, ",") {
+			hops = append(hops, strings.TrimSpace(hop))
+		}
+	}
+
+	for i := len(hops) - 1; i >= 0; i-- {
+		// Stop at anything that is not an IP; the hop to its right is the
+		// last address a trusted proxy vouched for.
+		if net.ParseIP(hops[i]) == nil {
+			break
+		}
+		clientIP = hops[i]
+		if !isPrivateIP(clientIP) {
+			break
+		}
 	}
 	return clientIP
 }

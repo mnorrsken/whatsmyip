@@ -29,5 +29,6 @@ All notable changes to this project are documented here. Headings use `## [X.Y.Z
 
 ### Security
 
+- A forged `X-Forwarded-For` no longer shows whois info and headers to a public client. The header is used only when the direct peer is a private address, and is read right to left, so the client is the first address that is not a private proxy.
 - Container runs as non-root with a read-only root filesystem and all capabilities dropped (Helm chart).
 - Images and dependencies are scanned with Trivy in CI, before release, and daily.

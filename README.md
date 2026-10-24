@@ -28,6 +28,8 @@ Environment: `WHOIS_BASE_URL` sets the whois API base URL (default: ip-api.com).
 
 The client IP is always shown. Whois info and request headers are shown only if the client IP is private, or the request has a `Remote-User` header (set by an authenticating proxy). Other requests see the IP only.
 
+`X-Forwarded-For` is used only when the request comes from a private address (a proxy). It is read right to left, and the first address that is not private is the client, so entries a client adds itself are ignored.
+
 ## Make targets
 
 `build` (to `bin/`), `run`, `test`, `race`, `vet`, `fmt`, `lint`, `helm-lint`, `docker-build`, `scan` (Trivy), `clean`. Run `make help` for the list.
