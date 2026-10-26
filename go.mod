@@ -1,6 +1,6 @@
 module github.com/mnorrsken/whatsmyip
 
-go 1.26.0
+go 1.27
 
 require (
 	github.com/jellydator/ttlcache/v3 v3.4.1
