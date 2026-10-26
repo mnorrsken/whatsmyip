@@ -2,7 +2,7 @@ BINARY := whatsmyip
 IMAGE  := whatsmyip:dev
 TRIVY  ?= aquasec/trivy:0.76.1
 
-.PHONY: all build run test race vet fmt lint helm-lint docker-build scan clean help
+.PHONY: all build run test race vet fmt lint vuln helm-lint docker-build scan clean help
 
 all: build
 
@@ -26,6 +26,9 @@ fmt:
 
 lint:
 	golangci-lint run ./...
+
+vuln:
+	go run golang.org/x/vuln/cmd/govulncheck@v1.9.0 ./...
 
 helm-lint:
 	helm lint charts/$(BINARY)
@@ -51,6 +54,7 @@ help:
 	@echo "test / race   Run tests (race: with -race)"
 	@echo "vet / fmt     go vet / gofmt -w"
 	@echo "lint          golangci-lint"
+	@echo "vuln          govulncheck"
 	@echo "helm-lint     Lint and render the Helm chart"
 	@echo "docker-build  Build $(IMAGE)"
 	@echo "scan          Trivy scan of source and image"
