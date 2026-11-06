@@ -4,6 +4,8 @@ All notable changes to this project are documented here. Headings use `## [X.Y.Z
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-06
+
 ### Added
 
 - Helm chart `charts/whatsmyip` with values for `config.include`, `config.exclude`, `config.whoisBaseURL` and `ingress.*`. Hardened security context and read-only root filesystem.
@@ -17,7 +19,7 @@ All notable changes to this project are documented here. Headings use `## [X.Y.Z
 ### Changed
 
 - Image is built with `golang:1.27-alpine` and runs on `gcr.io/distroless/static-debian13:nonroot` as a non-root user. Templates are in `/app/templates`.
-- Go dependencies updated; `go` directive is now 1.26.
+- Go dependencies updated; `go` directive is now 1.27.
 - The copy button for the IP address is now a real `<button>`.
 - The image is no longer pushed on every push to `main`. It is published only by the release workflow.
 
@@ -32,3 +34,4 @@ All notable changes to this project are documented here. Headings use `## [X.Y.Z
 - A forged `X-Forwarded-For` no longer shows whois info and headers to a public client. The header is used only when the direct peer is a private address, and is read right to left, so the client is the first address that is not a private proxy.
 - Container runs as non-root with a read-only root filesystem and all capabilities dropped (Helm chart).
 - Images and dependencies are scanned with Trivy in CI, before release, and daily.
+- `golang.org/x/net` updated to v0.62.0, which fixes CVE-2026-78661 and CVE-2026-97045.
