@@ -4,6 +4,13 @@ All notable changes to this project are documented here. Headings use `## [X.Y.Z
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-11-16
+
+### Changed
+
+- Rebuilt with Go 1.27.4 to fix CVE-2026-97054 (net/http, `MaxBytesReader` on HTTP/1).
+- Bump `github.com/onsi/ginkgo/v2` (test dependency).
+
 ## [1.0.0] - 2026-11-06
 
 ### Added
